@@ -21,7 +21,13 @@ def get_image_tool():
 @st.cache_resource
 def get_annotation_tool():
     try:
+        from multidimensional_annotation_tool import MultiDimensionalAnnotationTool
         return MultiDimensionalAnnotationTool()
+    except ImportError as e:
+        # 如果是缺少依赖（如torch），只在调试模式下显示警告
+        if st.get_option('client.showErrorDetails'):
+            st.warning(f"多维标注工具未初始化（缺少依赖）: {str(e)}")
+        return None
     except Exception as e:
         st.error(f"多维标注工具初始化失败: {str(e)}")
         return None
