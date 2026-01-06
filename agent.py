@@ -1,8 +1,17 @@
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-from tools import tools
 import os
 import re
+
+# 尝试导入tools，形成多层防御
+HAS_TOOLS = False
+try:
+    from tools import tools
+    HAS_TOOLS = True
+except ImportError as e:
+    print(f"Warning: Failed to import tools: {e}")
+    # 定义一个空的tools列表作为备用
+    tools = []
 
 class PapercutAgent:
     def __init__(self, model_name="deepseek-chat", temperature=0.7):
