@@ -2,102 +2,14 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import os
-import time
+
 import json
-import requests
+
 from pathlib import Path
 from agent import PapercutAgent
 from image_tool import ImageRecognitionTool
 
-# ==================== 模型下载配置 ====================
-# 模型的GitHub Releases链接（用户提供的示例链接）
-MODEL_CONFIG = {
-    'papercut_model_final.h5': {
-        'url': 'https://github.com/liU2006-bin/papercut_agent/releases/download/v1.0.0/papercut_model_final.h5',
-        'description': '剪纸识别模型',
-        'sha256': '2ec91e4e5551437f641a215b6a6744776c8d5db8558e19105baf20c53e718222'
-    },
-    'best_model.h5': {
-        'url': 'https://github.com/liU2006-bin/papercut_agent/releases/download/v1.0.0/best_model.h5',
-        'description': '最佳剪纸识别模型',
-        'sha256': '685be9b12730f33ab9856c189dd43d5117fe83c8f65b703a1db7a65b67168326'
-    }
-}
 
-# 模型优先级列表，按顺序尝试加载
-MODEL_PRIORITY = ['best_model.h5', 'papercut_model_final.h5']
-
-
-def download_model(model_name, url, retry_count=3):
-    """下载模型文件"""
-    for attempt in range(retry_count):
-        try:
-            response = requests.get(url, stream=True, timeout=30)
-            response.raise_for_status()
-            
-            total_size = int(response.headers.get('content-length', 0))
-            block_size = 8192
-            downloaded = 0
-            
-            with open(model_name, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=block_size):
-                    if chunk:
-                        f.write(chunk)
-                        downloaded += len(chunk)
-            return True
-            
-        except Exception as e:
-            st.warning(f"下载 {model_name} 失败，尝试 {attempt + 1}/{retry_count}: {e}")
-            if attempt < retry_count - 1:
-                time.sleep(2)
-    
-    return False
-
-
-def setup_models():
-    """检查并下载所有必要的模型文件"""
-    missing_models = []
-    
-    # 检查哪些模型缺失
-    for model_name, config in MODEL_CONFIG.items():
-        if not Path(model_name).exists():
-            missing_models.append((model_name, config['url'], config['description']))
-    
-    # 如果有缺失的模型，下载它们
-    if missing_models:
-        st.sidebar.title("🔧 模型设置")
-        
-        # 初始化下载成功计数
-        models_downloaded = 0
-        models_total = len(missing_models)
-        
-        with st.sidebar.expander("模型下载状态", expanded=True):
-            for model_name, url, description in missing_models:
-                st.write(f"**{model_name}** - {description}")
-                
-                try:
-                    with st.spinner(f"正在下载 {model_name}..."):
-                        if download_model(model_name, url):
-                            st.success(f"✅ {model_name} 下载完成")
-                            models_downloaded += 1
-                        else:
-                            st.warning(f"⚠️ {model_name} 下载失败，将尝试使用其他可用模型")
-                            # 提供手动下载链接
-                            st.markdown(f"**[请手动下载]({url})**，然后放在当前目录")
-                except Exception as e:
-                    st.error(f"下载出错: {e}")
-        
-        if models_downloaded > 0:
-            st.sidebar.success(f"✅ 成功下载 {models_downloaded}/{models_total} 个模型")
-        else:
-            st.sidebar.warning("⚠️ 所有模型下载失败，请检查网络连接或手动下载模型")
-    
-    # 即使所有模型都下载失败，也返回True，让应用继续运行
-    # 应用会在运行时尝试使用本地已有的模型
-    return True
-
-
-# ==================== 模型下载结束 ====================
 
 # 初始化图像识别工具
 @st.cache_resource
