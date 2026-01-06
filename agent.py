@@ -17,14 +17,19 @@ class PapercutAgent:
     def __init__(self, model_name="deepseek-chat", temperature=0.7):
         api_key = os.environ.get("DEEPSEEK_API_KEY")
         if not api_key:
-            raise Exception("请设置DEEPSEEK_API_KEY环境变量")
-        
-        self.llm = ChatOpenAI(
-            model_name=model_name,
-            temperature=temperature,
-            api_key=api_key,
-            base_url="https://api.deepseek.com/v1"
-        )
+            self.llm = None
+            print("警告: 未设置DEEPSEEK_API_KEY环境变量，智能体功能将受限")
+        else:
+            try:
+                self.llm = ChatOpenAI(
+                    model_name=model_name,
+                    temperature=temperature,
+                    api_key=api_key,
+                    base_url="https://api.deepseek.com/v1"
+                )
+            except Exception as e:
+                self.llm = None
+                print(f"警告: 初始化LLM失败: {str(e)}")
         
         self.tools_dict = {tool.name: tool for tool in tools}
         
@@ -74,6 +79,10 @@ class PapercutAgent:
     
     def run(self, query: str, chat_history: str = "") -> str:
         try:
+            # 检查LLM是否可用
+            if not self.llm:
+                return "智能体执行失败：未配置有效的DeepSeek API密钥。请在侧边栏设置有效的API密钥。"
+            
             # 构建消息列表
             system_message = self.system_prompt.format(tools_list=self._get_available_tools())
             messages = [
@@ -125,7 +134,11 @@ class PapercutAgent:
             
             return response
         except Exception as e:
-            return f"智能体执行失败: {str(e)}"
+            # 处理API密钥无效的情况
+            error_msg = str(e)
+            if "Authentication Fails" in error_msg or "Invalid API key" in error_msg or "invalid_request_error" in error_msg or "401" in error_msg:
+                return "智能体执行失败：DeepSeek API密钥无效或已过期。请在侧边栏设置有效的API密钥。"
+            return f"智能体执行失败: {error_msg}"
 
 if __name__ == "__main__":
     if "DEEPSEEK_API_KEY" not in os.environ:
