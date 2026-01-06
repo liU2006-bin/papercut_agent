@@ -2,9 +2,7 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import os
-
 import json
-
 from pathlib import Path
 from agent import PapercutAgent
 from image_tool import ImageRecognitionTool
@@ -75,29 +73,19 @@ if "messages" not in st.session_state:
 if "api_key_set" not in st.session_state:
     st.session_state.api_key_set = "DEEPSEEK_API_KEY" in os.environ
 
-# 检查并下载模型
-model_check_status = setup_models()
-
 # 页面标题和介绍
 st.title("✂️ 安塞剪纸智能体")
 st.write("欢迎使用安塞剪纸智能体！上传一张剪纸图像，我将为您识别其类别并提供设计建议。")
 
-# 在模型下载完成后，尝试加载模型
-if model_check_status:
-    # 尝试加载模型
-    if image_tool:
-        load_success = image_tool.load_model()
-        if load_success:
-            st.success("✅ 所有模型已就绪，可以正常使用")
-        else:
-            st.warning("⚠️ 模型文件已下载，但加载失败，部分功能可能受限")
+# 尝试加载模型
+if image_tool:
+    load_success = image_tool.load_model()
+    if load_success:
+        st.success("✅ 所有模型已就绪，可以正常使用")
     else:
-        st.warning("⚠️ 图像识别工具未初始化，部分功能可能受限")
+        st.warning("⚠️ 模型加载失败，部分功能可能受限")
 else:
-    st.warning("⚠️ 部分模型可能未下载成功，部分功能可能受限")
-    # 即使模型下载失败，也尝试加载可用的模型
-    if image_tool:
-        image_tool.load_model()
+    st.warning("⚠️ 图像识别工具未初始化，部分功能可能受限")
 
 # 创建侧边栏
 with st.sidebar:
