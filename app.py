@@ -24,6 +24,9 @@ MODEL_CONFIG = {
     }
 }
 
+# 模型优先级列表，按顺序尝试加载
+MODEL_PRIORITY = ['best_model.h5', 'papercut_model_final.h5']
+
 
 def download_model(model_name, url, retry_count=3):
     """下载模型文件"""
@@ -64,6 +67,10 @@ def setup_models():
     if missing_models:
         st.sidebar.title("🔧 模型设置")
         
+        # 初始化下载成功计数
+        models_downloaded = 0
+        models_total = len(missing_models)
+        
         with st.sidebar.expander("模型下载状态", expanded=True):
             for model_name, url, description in missing_models:
                 st.write(f"**{model_name}** - {description}")
@@ -72,18 +79,21 @@ def setup_models():
                     with st.spinner(f"正在下载 {model_name}..."):
                         if download_model(model_name, url):
                             st.success(f"✅ {model_name} 下载完成")
+                            models_downloaded += 1
                         else:
-                            st.error(f"❌ {model_name} 下载失败")
-                            
+                            st.warning(f"⚠️ {model_name} 下载失败，将尝试使用其他可用模型")
                             # 提供手动下载链接
                             st.markdown(f"**[请手动下载]({url})**，然后放在当前目录")
-                            return False
                 except Exception as e:
                     st.error(f"下载出错: {e}")
-                    return False
         
-        st.sidebar.success("所有模型下载完成！")
+        if models_downloaded > 0:
+            st.sidebar.success(f"✅ 成功下载 {models_downloaded}/{models_total} 个模型")
+        else:
+            st.sidebar.warning("⚠️ 所有模型下载失败，请检查网络连接或手动下载模型")
     
+    # 即使所有模型都下载失败，也返回True，让应用继续运行
+    # 应用会在运行时尝试使用本地已有的模型
     return True
 
 
