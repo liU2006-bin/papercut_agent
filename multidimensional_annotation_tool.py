@@ -1,5 +1,14 @@
-import torch
-import clip
+# 尝试导入torch和clip，如果失败则设置标志
+HAS_TORCH = False
+try:
+    import torch
+    import clip
+    HAS_TORCH = True
+except ImportError:
+    torch = None
+    clip = None
+
+# 导入其他依赖
 from PIL import Image
 import numpy as np
 import json
@@ -11,17 +20,27 @@ class MultiDimensionalAnnotationTool:
         """
         初始化多维标注工具
         """
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
-        print(f"CLIP模型已加载，使用设备: {self.device}")
+        # 初始化基本属性
+        self.has_torch = HAS_TORCH
+        self.device = None
+        self.model = None
+        self.preprocess = None
         
+        if self.has_torch:
+            # 只有在torch可用时才加载CLIP模型
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
+            print(f"CLIP模型已加载，使用设备: {self.device}")
+        
+        # 初始化知识库和其他属性
         self.knowledge_base = knowledge_base
         self.patterns = self.knowledge_base["knowledge_base"]["patterns"]
         self.regions = self.knowledge_base["knowledge_base"]["regions"]
         
         self.image_tool = ImageRecognitionTool()
         
-        self.pattern_labels = self._prepare_pattern_labels()
+        if self.has_torch:
+            self.pattern_labels = self._prepare_pattern_labels()
         
         self.pattern_categories = {
             "人物类": ["人物", "童子", "人物纹", "人物组合", "骑兽", "牧童", "娃娃"],
@@ -55,6 +74,8 @@ class MultiDimensionalAnnotationTool:
         """
         预处理图像用于CLIP模型
         """
+        if not self.has_torch:
+            raise ValueError("torch is not available, cannot preprocess image")
         image = self.preprocess(Image.open(img_path)).unsqueeze(0).to(self.device)
         return image
     
@@ -173,6 +194,10 @@ class MultiDimensionalAnnotationTool:
         """
         使用CLIP模型匹配图像与知识库中的纹样
         """
+        if not self.has_torch:
+            # 没有torch时返回空列表或默认结果
+            return []
+        
         image = self.preprocess_image(img_path)
         
         with torch.no_grad():
