@@ -5,7 +5,7 @@ import os
 from PIL import Image as PILImage, ImageOps
 
 class ImageRecognitionTool:
-    def __init__(self, model_path='papercut_model_final.h5'):
+    def __init__(self, model_path=None):
         """
         初始化图像识别工具
         :param model_path: 模型文件路径
@@ -13,21 +13,65 @@ class ImageRecognitionTool:
         self.model_path = model_path
         self.model = None
         self.class_names = ['人物类', '动物类', '抽象类', '花样类', '花草植物类']
-        self._load_model()
+        # 不立即加载模型，而是在需要时调用load_model方法
+        # self._load_model()
+    
+    def load_model(self, model_path=None):
+        """
+        手动加载模型
+        :param model_path: 可选的模型文件路径，优先级高于初始化时的model_path
+        :return: 是否加载成功
+        """
+        if model_path:
+            self.model_path = model_path
+        
+        # 模型文件候选路径列表
+        model_candidates = [
+            'papercut_model_final.h5',
+            './papercut_model_final.h5',
+            '../papercut_model_final.h5',
+            'best_model.h5',
+            './best_model.h5',
+            '../best_model.h5'
+        ]
+        
+        # 如果提供了model_path，添加到候选列表首位
+        if self.model_path:
+            model_candidates.insert(0, self.model_path)
+        
+        # 寻找可用的模型文件
+        found_model_path = None
+        for candidate in model_candidates:
+            if os.path.exists(candidate):
+                found_model_path = candidate
+                break
+        
+        if found_model_path:
+            self.model_path = found_model_path
+            return self._load_model()
+        return False
     
     def _load_model(self):
         """
         加载训练好的模型
         """
         try:
-            if os.path.exists(self.model_path):
+            if self.model_path and os.path.exists(self.model_path):
                 self.model = tf.keras.models.load_model(self.model_path)
                 print(f"成功加载模型: {self.model_path}")
+                return True
             else:
-                raise FileNotFoundError(f"模型文件不存在: {self.model_path}")
+                print(f"未找到指定模型文件: {self.model_path}")
+                print("模型未加载，图像识别功能将不可用")
+                # 不抛出异常，而是设置模型为None，让应用能够继续运行
+                self.model = None
+                return False
         except Exception as e:
             print(f"加载模型失败: {str(e)}")
-            raise
+            print("模型未加载，图像识别功能将不可用")
+            # 不抛出异常，而是设置模型为None，让应用能够继续运行
+            self.model = None
+            return False
     
     def preprocess_image(self, img_path, target_size=(224, 224)):
         """
@@ -124,26 +168,49 @@ class ImageRecognitionTool:
         :return: 预测结果和特征分析字典
         """
         if self.model is None:
-            raise ValueError("模型未加载")
+            # 模型未加载时，只返回视觉特征分析结果
+            print("模型未加载，只返回视觉特征分析结果")
+            visual_features = self.analyze_visual_features(img_path)
+            return {
+                'class_name': '未知',
+                'class_index': -1,
+                'confidence': 0.0,
+                'all_predictions': {cls: 0.0 for cls in self.class_names},
+                'visual_features': visual_features,
+                'warning': '模型未加载，无法进行图像分类'
+            }
         
-        # 预处理图像
-        img_array = self.preprocess_image(img_path)
-        
-        # 预测
-        predictions = self.model.predict(img_array)
-        predicted_class = np.argmax(predictions[0])
-        confidence = predictions[0][predicted_class]
-        
-        # 分析视觉特征
-        visual_features = self.analyze_visual_features(img_path)
-        
-        return {
-            'class_name': self.class_names[predicted_class],
-            'class_index': int(predicted_class),
-            'confidence': float(confidence),
-            'all_predictions': {self.class_names[i]: float(predictions[0][i]) for i in range(len(self.class_names))},
-            'visual_features': visual_features
-        }
+        try:
+            # 预处理图像
+            img_array = self.preprocess_image(img_path)
+            
+            # 预测
+            predictions = self.model.predict(img_array)
+            predicted_class = np.argmax(predictions[0])
+            confidence = predictions[0][predicted_class]
+            
+            # 分析视觉特征
+            visual_features = self.analyze_visual_features(img_path)
+            
+            return {
+                'class_name': self.class_names[predicted_class],
+                'class_index': int(predicted_class),
+                'confidence': float(confidence),
+                'all_predictions': {self.class_names[i]: float(predictions[0][i]) for i in range(len(self.class_names))},
+                'visual_features': visual_features
+            }
+        except Exception as e:
+            print(f"预测失败: {str(e)}")
+            # 预测失败时，只返回视觉特征分析结果
+            visual_features = self.analyze_visual_features(img_path)
+            return {
+                'class_name': '未知',
+                'class_index': -1,
+                'confidence': 0.0,
+                'all_predictions': {cls: 0.0 for cls in self.class_names},
+                'visual_features': visual_features,
+                'warning': f'预测失败: {str(e)}'
+            }
 
 # 示例用法
 if __name__ == "__main__":
