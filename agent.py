@@ -101,11 +101,12 @@ class PapercutAgent:
             max_iterations = 3
             iteration = 0
             
-            while "<tool_call>" in response and "</tool_call>" in response and iteration < max_iterations:
+            # 支持两种格式：<tool_call>（带下划线）和<toolcall>（没有下划线）
+            while (("<tool_call>" in response and "</tool_call>" in response) or ("<toolcall>" in response and "</toolcall>" in response)) and iteration < max_iterations:
                 iteration += 1
                 
-                # 解析工具调用
-                tool_pattern = r'<tool_name>(.*?)</tool_name>.*?<tool_input>(.*?)</tool_input>'
+                # 解析工具调用，支持两种格式
+                tool_pattern = r'<tool[ _]name>(.*?)</tool[ _]name>.*?<tool[ _]input>(.*?)</tool[ _]input>'
                 matches = re.findall(tool_pattern, response, re.DOTALL)
                 
                 if not matches:
