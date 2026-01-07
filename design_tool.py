@@ -68,7 +68,7 @@ class DesignTool:
         
         if festival == '春节':
             # 春节相关纹样
-            tiger = self.knowledge_tool.get_pattern_by_id('pattern_007')  # 虎纹
+            tiger = self.knowledge_tool.get_pattern_by_id('pattern_005')  # 虎纹
             lion = self.knowledge_tool.get_pattern_by_id('pattern_008')  # 狮纹
             calabash = self.knowledge_tool.get_pattern_by_id('pattern_005')  # 葫芦纹
             
@@ -95,7 +95,7 @@ class DesignTool:
             # 端午节相关纹样
             frog = self.knowledge_tool.get_pattern_by_id('pattern_002')  # 蛙纹
             calabash = self.knowledge_tool.get_pattern_by_id('pattern_005')  # 葫芦纹
-            tiger = self.knowledge_tool.get_pattern_by_id('pattern_007')  # 虎纹
+            tiger = self.knowledge_tool.get_pattern_by_id('pattern_005')  # 虎纹
             
             if frog:
                 festival_patterns.append(frog)
